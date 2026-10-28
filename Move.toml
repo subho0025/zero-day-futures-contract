@@ -7,6 +7,7 @@ authors = []
 zero_day_futures = "_"
 
 [dev-addresses]
+zero_day_futures = "0xCAFE"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-framework.git"
