@@ -1,4 +1,4 @@
-module zero_day_futures::zero_day_future {
+module zero_day_futures::zero_day_futures {
     use std::signer;
     use std::vector;
 
@@ -36,8 +36,8 @@ module zero_day_futures::zero_day_future {
         pnl_amount: u128
     }
 
-    public fun init_market(account: signer, price: u128, duration: u128){
-        let account_addr: address = signer::address_of(&account);
+    public entry fun init_market(account: &signer, price: u128, duration: u128){
+        let account_addr: address = signer::address_of(account);
         assert!(account_addr == @zero_day_futures,E_UNAUTHORIZED);
 
         assert!(!exists<MarketState>(@zero_day_futures), E_MARKET_ALREADY_INITIALIZED);
@@ -45,7 +45,7 @@ module zero_day_futures::zero_day_future {
         assert!(price > 0, E_INVALID_PRICE);
         assert!(duration > 0, E_INVALID_DURATION);
 
-        move_to(&account, MarketState {
+        move_to(account, MarketState {
             admin_address: account_addr,
             curr_price: price,
             duration,
@@ -53,22 +53,45 @@ module zero_day_futures::zero_day_future {
 
     }
 
-    public fun init_trader(account: signer){
-        let account_addr: address = signer::address_of(&account);
+    public entry fun init_trader(account: &signer){
+        let account_addr: address = signer::address_of(account);
 
         assert!(exists<MarketState>(@zero_day_futures),E_MARKET_NOT_INITIALIZED);
 
         assert!(!exists<Trader>(account_addr),E_TRADER_ALREADY_INITIALIZED);
 
-        move_to(&account, Trader{
+        move_to(account, Trader{
             balance: 10000000,
             locked_balance: 0,
             trades: vector[],
             next_id: 1
         });
 
-
     }
+
+    public entry fun update_price(admin: &signer,new_price: u128) acquires MarketState {
+        assert!(exists<MarketState>(@zero_day_futures),E_MARKET_NOT_INITIALIZED);
+
+        let admin_addr : address = signer::address_of(admin);
+        let market_state : &mut MarketState= borrow_global_mut<MarketState>(@zero_day_futures);
+
+        assert!(admin_addr == market_state.admin_address,E_UNAUTHORIZED);
+
+        assert!(new_price > 0, E_INVALID_PRICE);
+
+        market_state.curr_price = new_price;
+    }
+
+
+    #[view]
+    public fun get_price(): u128 acquires MarketState {
+        assert!(exists<MarketState>(@zero_day_futures),E_MARKET_NOT_INITIALIZED);
+
+        let market_state =borrow_global<MarketState>(@zero_day_futures);
+
+        market_state.curr_price
+    }
+
 
     
 }
