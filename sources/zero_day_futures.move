@@ -1,6 +1,7 @@
 module zero_day_futures::zero_day_futures {
     use std::signer;
     use std::vector;
+    use aptos_framework::timestamp;
 
     const E_UNAUTHORIZED: u64 = 1;
     const E_MARKET_ALREADY_INITIALIZED: u64 = 2;
@@ -8,6 +9,9 @@ module zero_day_futures::zero_day_futures {
     const E_INVALID_DURATION: u64 = 4;
     const E_MARKET_NOT_INITIALIZED: u64 = 5;
     const E_TRADER_ALREADY_INITIALIZED: u64 = 6;
+    const E_TRADER_NOT_INITIALIZED: u64 = 7;
+    const E_INVALID_STAKE: u64 = 8;
+    const E_INSUFFICIENT_BALANCE: u64 = 9;
 
 
     struct MarketState has key{
@@ -82,6 +86,51 @@ module zero_day_futures::zero_day_futures {
         market_state.curr_price = new_price;
     }
 
+    public entry fun open_trade(account: &signer, direction: bool,stake: u128,) acquires MarketState, Trader {
+        
+        assert!(exists<MarketState>(@zero_day_futures),E_MARKET_NOT_INITIALIZED);
+
+        let account_addr:address = signer::address_of(account);
+
+        assert!(exists<Trader>(account_addr),E_TRADER_NOT_INITIALIZED);
+
+        assert!(stake>0, E_INVALID_STAKE);
+
+        let market_state :&MarketState =borrow_global<MarketState>(@zero_day_futures);
+
+        let entry_price :u128= market_state.curr_price;
+        let duration :u128= market_state.duration;
+
+        let open_time :u128 = (timestamp::now_seconds() as u128);
+        let expire_time: u128 = open_time + duration;
+
+        let trader: &mut Trader = borrow_global_mut<Trader>(account_addr);
+
+        assert!(stake <= trader.balance, E_INSUFFICIENT_BALANCE);
+
+        let trade_id: u64 = trader.next_id;
+
+        trader.balance = trader.balance - stake;
+        
+        trader.locked_balance = trader.locked_balance + stake;
+
+        trader.next_id = trader.next_id + 1;
+
+        vector::push_back(&mut trader.trades, Trade {
+                id: trade_id,
+                direction,
+                stake,
+                entry_price,
+                open_time,
+                expire_time,
+                status: false,
+                settle_price: 0,
+                settle_res: false,
+                pnl_amount: 0,
+            },
+        );
+    }
+
 
     #[view]
     public fun get_price(): u128 acquires MarketState {
@@ -92,6 +141,96 @@ module zero_day_futures::zero_day_futures {
         market_state.curr_price
     }
 
+    #[view]
+    public fun get_trader_balance(addr: address): u128 acquires Trader{
 
-    
+        assert!(exists<Trader>(addr), E_TRADER_NOT_INITIALIZED);
+
+        let trader : &Trader = borrow_global<Trader>(addr);
+
+        trader.balance
+    }
+
+    #[view]
+    public fun get_locked_balance(addr: address): u128 acquires Trader{
+
+        assert!(exists<Trader>(addr), E_TRADER_NOT_INITIALIZED);
+
+        let trader : &Trader = borrow_global<Trader>(addr);
+
+        trader.locked_balance
+    }
+
+     #[view]
+    public fun get_trade_count(addr: address): u64 acquires Trader{
+
+        assert!(exists<Trader>(addr), E_TRADER_NOT_INITIALIZED);
+
+        let trader : &Trader= borrow_global<Trader>(addr);
+
+        vector::length(&trader.trades)
+    }
+
+    public fun get_next_id(addr: address): u64 acquires Trader{
+        
+        assert!(exists<Trader>(addr),E_TRADER_NOT_INITIALIZED);
+
+        borrow_global<Trader>(addr).next_id
+    }
+
+    #[view]
+    public fun get_trade_entry_price(addr: address, index: u64): u128 acquires Trader {
+        
+        assert!(exists<Trader>(addr),E_TRADER_NOT_INITIALIZED);
+
+        let trader: &Trader = borrow_global<Trader>(addr);
+        let trade: &Trade = vector::borrow(&trader.trades, index);
+
+        trade.entry_price
+    }
+
+    #[view]
+    public fun get_trade_open_time(addr: address, index: u64,): u128 acquires Trader {
+        
+        assert!(exists<Trader>(addr), E_TRADER_NOT_INITIALIZED);
+
+        let trader: &Trader = borrow_global<Trader>(addr);
+        let trade: &Trade = vector::borrow(&trader.trades, index);
+
+        trade.open_time
+    }
+
+    #[view]
+    public fun get_trade_expiry(addr: address, index: u64,): u128 acquires Trader {
+        
+        assert!(exists<Trader>(addr), E_TRADER_NOT_INITIALIZED);
+
+        let trader: &Trader = borrow_global<Trader>(addr);
+        let trade: &Trade = vector::borrow(&trader.trades, index);
+
+        trade.expire_time
+    }
+
+    #[view]
+    public fun get_trade_direction(addr: address, index: u64,): bool acquires Trader {
+        
+        assert!(exists<Trader>(addr),E_TRADER_NOT_INITIALIZED);
+
+        let trader: &Trader = borrow_global<Trader>(addr);
+        let trade: &Trade = vector::borrow(&trader.trades, index);
+
+        trade.direction
+    }
+
+    #[view]
+    public fun get_trade_status(addr: address, index: u64,): bool acquires Trader {
+        
+        assert!(exists<Trader>(addr),E_TRADER_NOT_INITIALIZED);
+
+        let trader: &Trader = borrow_global<Trader>(addr);
+        let trade: &Trade = vector::borrow(&trader.trades, index);
+
+        trade.status
+    }
+
 }
