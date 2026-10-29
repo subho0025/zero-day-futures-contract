@@ -62,3 +62,12 @@ td {
 a {
   color: #7db4ff;
 }
+.muted {
+  opacity: 0.65;
+  font-size: 0.9em;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

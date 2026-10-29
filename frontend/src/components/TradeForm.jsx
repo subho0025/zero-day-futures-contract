@@ -3,7 +3,9 @@ import { useState } from "react";
 export default function TradeForm({ trader, disabled, onCreate, onOpen }) {
   const [stake, setStake] = useState("1000");
 
-  if (!trader) {
+  if (trader === undefined) return <div className="card">Loading trader…</div>;
+
+  if (trader === null) {
     return (
       <div className="card">
         <h3>Trader</h3>
@@ -20,10 +22,11 @@ export default function TradeForm({ trader, disabled, onCreate, onOpen }) {
   return (
     <div className="card">
       <h3>Place trade</h3>
-      <p>Free balance: {trader.free}</p>
-      <p>Locked balance: {trader.locked}</p>
+      <p className="muted">Game balance (internal units, not APT)</p>
+      <p>Free: {trader.free}</p>
+      <p>Locked: {trader.locked}</p>
       <div className="row">
-        <input type="number" value={stake} onChange={(e) => setStake(e.target.value)} />
+        <input type="number" min="1" step="1" value={stake} onChange={(e) => setStake(e.target.value)} />
         <button onClick={() => onOpen(true, raw)} disabled={invalid}>
           Long
         </button>

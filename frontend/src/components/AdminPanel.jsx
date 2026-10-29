@@ -1,24 +1,39 @@
 import { useState } from "react";
-import { fromPrice } from "../utils";
+import { toUnits } from "../utils";
 
-export default function AdminPanel({ market, onInit, onSetPrice }) {
-  const [price, setPrice] = useState("1");
+export default function AdminPanel({ market, disabled, onInit, onSetPrice }) {
+  const [price, setPrice] = useState("100");
   const [duration, setDuration] = useState("60");
+
+  if (market === undefined) return null;
+
+  const priceOk = toUnits(price) > 0;
 
   return (
     <div className="card">
       <h3>Admin</h3>
       <div className="row">
-        <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
-        {!market && (
+        <label>
+          Price <input type="number" min="1" step="1" value={price} onChange={(e) => setPrice(e.target.value)} />
+        </label>
+        {market === null ? (
           <>
-            <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
-            <button onClick={() => onInit(fromPrice(price), Math.floor(Number(duration)))}>
+            <label>
+              Duration (s){" "}
+              <input type="number" min="1" step="1" value={duration} onChange={(e) => setDuration(e.target.value)} />
+            </label>
+            <button
+              disabled={disabled || !priceOk || !(toUnits(duration) > 0)}
+              onClick={() => onInit(toUnits(price), toUnits(duration))}
+            >
               Init market
             </button>
           </>
+        ) : (
+          <button disabled={disabled || !priceOk} onClick={() => onSetPrice(toUnits(price))}>
+            Update price
+          </button>
         )}
-        {market && <button onClick={() => onSetPrice(fromPrice(price))}>Update price</button>}
       </div>
     </div>
   );

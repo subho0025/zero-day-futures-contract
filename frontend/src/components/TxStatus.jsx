@@ -1,3 +1,5 @@
+import { explorer } from "../config";
+
 export default function TxStatus({ status, hash }) {
   if (!status) return null;
 
@@ -5,11 +7,7 @@ export default function TxStatus({ status, hash }) {
     <p>
       {status}{" "}
       {hash && (
-        <a
-          href={`https://explorer.aptoslabs.com/txn/${hash}?network=testnet`}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a href={explorer("txn", hash)} target="_blank" rel="noreferrer">
           view tx
         </a>
       )}
