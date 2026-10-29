@@ -159,6 +159,20 @@ module zero_day_futures::trade {
     }
 
     #[view]
+    public fun get_trades(addr: address): vector<Trade> acquires TradeRecord {
+        if (!exists<TradeRecord>(addr)) {
+            return vector::empty<Trade>()
+        };
+
+        borrow_global<TradeRecord>(addr).trades
+    }
+
+    #[view]
+    public fun get_trade_at(addr: address, index: u64): Trade acquires TradeRecord {
+        get_trade(addr, index)
+    }
+
+    #[view]
     public fun get_trade_count(addr: address): u64 acquires TradeRecord {
         
         if (!exists<TradeRecord>(addr)) {
@@ -175,6 +189,7 @@ module zero_day_futures::trade {
 
         borrow_global<TradeRecord>(addr).next_id
     }
+
 
     #[view]
     public fun get_trade_id(addr: address, index: u64): u64 acquires TradeRecord {

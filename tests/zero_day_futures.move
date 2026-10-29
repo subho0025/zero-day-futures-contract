@@ -1,6 +1,7 @@
 
 #[test_only]
 module zero_day_futures::zero_day_futures_tests {
+    use std::vector;
     use aptos_framework::account;
     use aptos_framework::timestamp;
 
@@ -993,5 +994,81 @@ module zero_day_futures::zero_day_futures_tests {
             trader::get_trader_balance(ALICE) == INITIAL_BALANCE,
             234
         );
+    }
+
+    #[test(framework = @aptos_framework)]
+    fun test_market_info_before_and_after_init() {
+        let (ready, price, duration, admin_addr) = market::get_market_info();
+        assert!(!ready && price == 0 && duration == 0 && admin_addr == @0x0, 900);
+
+        let admin = account::create_account_for_test(@zero_day_futures);
+        setup_market(&admin, 250, 90);
+
+        let (ready, price, duration, admin_addr) = market::get_market_info();
+        assert!(ready, 901);
+        assert!(price == 250, 902);
+        assert!(duration == 90, 903);
+        assert!(admin_addr == @zero_day_futures, 904);
+    }
+
+    #[test(framework = @aptos_framework)]
+    fun test_trader_info_matches_individual_getters(framework: signer) {
+        start_clock(&framework, 100);
+        let admin = account::create_account_for_test(@zero_day_futures);
+        let alice = account::create_account_for_test(ALICE);
+
+        let (ready, _, _) = trader::get_trader_info(ALICE);
+        assert!(!ready, 910);
+
+        setup_market_and_trader(&admin, &alice, 100, 60);
+        trade::open_trade(&alice, true, 1500);
+
+        let (ready, free, locked) = trader::get_trader_info(ALICE);
+        assert!(ready, 911);
+        assert!(free == trader::get_trader_balance(ALICE), 912);
+        assert!(locked == trader::get_locked_balance(ALICE), 913);
+        assert!(free == INITIAL_BALANCE - 1500 && locked == 1500, 914);
+    }
+
+    #[test(framework = @aptos_framework)]
+    fun test_get_trades_returns_full_book(framework: signer) {
+        start_clock(&framework, 100);
+        let admin = account::create_account_for_test(@zero_day_futures);
+        let alice = account::create_account_for_test(ALICE);
+
+        assert!(vector::length(&trade::get_trades(ALICE)) == 0, 920);
+
+        setup_market_and_trader(&admin, &alice, 100, 60);
+        trade::open_trade(&alice, true, 1000);
+        trade::open_trade(&alice, false, 2000);
+        trade::open_trade(&alice, true, 3000);
+
+        move_clock_to(200);
+        market::update_price(&admin, 110);
+        trade::settle_trade(&alice, 1);
+
+        let trades = trade::get_trades(ALICE);
+        assert!(vector::length(&trades) == 3, 921);
+        assert!(vector::length(&trades) == trade::get_trade_count(ALICE), 922);
+
+        let i = 0;
+        while (i < 3) {
+            assert!(*vector::borrow(&trades, i) == trade::get_trade_at(ALICE, i), 923);
+            i = i + 1;
+        };
+        assert!(trade::get_trade_status(ALICE, 1), 924);
+        assert!(trade::get_trade_settle_price(ALICE, 1) == 110, 925);
+    }
+
+    #[test(framework = @aptos_framework)]
+    #[expected_failure(abort_code = 12, location = zero_day_futures::trade)]
+    fun test_get_trade_at_rejects_bad_index(framework: signer) {
+        start_clock(&framework, 100);
+        let admin = account::create_account_for_test(@zero_day_futures);
+        let alice = account::create_account_for_test(ALICE);
+        setup_market_and_trader(&admin, &alice, 100, 60);
+        trade::open_trade(&alice, true, 1000);
+
+        trade::get_trade_at(ALICE, 1);
     }
 }

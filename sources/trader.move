@@ -84,6 +84,16 @@ module zero_day_futures::trader {
     }
 
     #[view]
+    public fun get_trader_info(addr: address): (bool, u128, u128) acquires Trader {
+        if (!exists<Trader>(addr)) {
+            return (false, 0, 0)
+        };
+
+        let t: &Trader = borrow_global<Trader>(addr);
+        (true, t.balance, t.locked_balance)
+    }
+
+    #[view]
     public fun is_trader_initialized(addr: address): bool {
         exists<Trader>(addr)
     }

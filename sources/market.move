@@ -71,6 +71,16 @@ module zero_day_futures::market {
     }
 
     #[view]
+    public fun get_market_info(): (bool, u128, u128, address) acquires MarketState {
+        if (!exists<MarketState>(@zero_day_futures)) {
+            return (false, 0, 0, @0x0)
+        };
+
+        let m: &MarketState = borrow_global<MarketState>(@zero_day_futures);
+        (true, m.curr_price, m.duration, m.admin_address)
+    }
+
+    #[view]
     public fun is_initialized(): bool {
         exists<MarketState>(@zero_day_futures)
     }
